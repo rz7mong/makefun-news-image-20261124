@@ -3,7 +3,7 @@
 
 One-page newspaper: serif masthead, six big numbers, region bar, UTC
 timeline, 3 lead stories with AI photos, 12 small stories with AI flat
-illustrations, a dotted world map with numbered pins, an ALSO list, a
+illustrations, a real world map with numbered pins, an ALSO list, a
 red DATE CHECK box and a sources footer.
 
 Text rule: facts + exact numbers + named sources only. No filler, no
