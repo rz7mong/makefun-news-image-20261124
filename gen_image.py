@@ -2,9 +2,11 @@
 """Build the 24 Nov 2026 world-news front page (1024x1024 PNG).
 
 One-page newspaper: serif masthead, six big numbers, region bar, UTC
-timeline, 3 lead stories with AI photos, 12 small stories with AI flat
-illustrations, a real world map with numbered pins, an ALSO list, a
-red DATE CHECK box and a sources footer.
+timeline, 3 lead stories with CODE-DRAWN flat-vector illustrations,
+12 small stories with code-drawn flat illustrations, a real world map
+with numbered pins, an ALSO list, a red DATE CHECK box and a sources
+footer. No photos, no AI image generation anywhere — every picture is
+drawn in code (see draw_panels.py).
 
 Text rule: facts + exact numbers + named sources only. No filler, no
 invented quotes, no generic sentences. All 44 stories happened or were
@@ -27,11 +29,11 @@ import os
 
 from PIL import Image, ImageDraw, ImageFont
 
+from draw_panels import LEAD_DRAW, SMALL_DRAW
+
 W, H = 1024, 1024
 FONT_DIR = "/usr/share/fonts/truetype/dejavu"
 HERE = os.path.dirname(os.path.abspath(__file__))
-PHOTOS = os.path.join(HERE, "build", "assets")
-ILLUS = os.path.join(HERE, "build", "illustrations")
 
 
 def bold(size):
@@ -65,23 +67,24 @@ DOT = (130, 160, 200)
 DOT_CAP = (150, 175, 210)
 
 # ------------------------------------------------------------------ content
-# (photo file, red banner, dateline, headline, summary, source, tag)
+# (illustration kind, red banner, dateline, headline, summary, source, tag)
+# Lead panels are drawn in code (draw_panels.LEAD_DRAW), 317x148.
 LEADS = [
-    ("media-generation-lead-ulleung-0-bd579945-c17d-4fb4-afcf-793697ae9624.webp",
+    ("ulleung",
      "SHELTER ALERT AT 07:52", "1 ULLEUNG, SOUTH KOREA · SECURITY",
      "Suspected North Korean jet sparks shelter alert",
      "An unidentified aircraft entered airspace near Ulleung island; "
      "a shelter warning went out at 07:52 and was lifted within "
      "minutes. Seoul first blamed a Russian jet, then revised it.",
      "Reuters, Yonhap", "REPORTED"),
-    ("media-generation-lead-pyongyang-0-6225e5ae-e756-4442-96af-e50224df95cc.webp",
+    ("pyongyang",
      "SWISS OFFICE AT RISK", "2 PYONGYANG, NORTH KOREA · DIPLOMACY",
      "Kim Yo Jong threatens Swiss office in Pyongyang",
      "North Korea will consider shutting Switzerland's diplomatic "
      "office after Bern sanctioned a children's camp over transfers "
      "of children from Russian-held Ukraine.",
      "Reuters, KCNA", "CLAIM"),
-    ("media-generation-lead-markets-0-4e326500-bd85-4b6f-a88e-7202eba802dc.webp",
+    ("tokyo",
      "NIKKEI FUTURES +3%", "3 TOKYO, JAPAN · MARKETS",
      "Tokyo reopens to a rally after Wall Street's best day",
      "Nikkei futures traded near 58,110 before Tuesday's reopen — "
@@ -92,9 +95,9 @@ LEADS = [
 
 # (number, red banner, dateline, headline, summary, source, illustration)
 SMALL = [
-    (4, "PMI 00:30 GMT", "4 TOKYO · ECONOMY",
-     "Japan flash PMI lands today",
-     "Nov flash PMI out 00:30 GMT; Oct factory 53.3.",
+    (4, "FACTORY 53.7", "4 TOKYO · ECONOMY",
+     "Japan PMI: factories up, services cool",
+     "Nov flash: factory 53.7, services 50.5, composite 51.5.",
      "S&P Global", "pmi"),
     (5, "9 TIES TONIGHT", "5 EUROPE · SPORT",
      "Champions League: 9 ties tonight",
@@ -156,7 +159,7 @@ ALSO = [
     (24, "US", "SOX chip index +14% on Monday", "Reuters"),
     (25, "Asia", "Korea eases buyback limits from today", "FSC"),
     (26, "Asia", "SK Hynix US shares +20% on Monday", "Finnhub"),
-    (27, "Asia", "Japan flash PMI out 00:30 GMT", "S&P Global"),
+    (27, "Asia", "Japan PMI: factory 53.7, services 50.5", "S&P Global"),
     (28, "Europe", "Germany Ifo index due today", "Reuters"),
     (29, "US", "ADP weekly jobs due today", "Newsquawk"),
     (30, "US", "Chicago Fed labor data due today", "Newsquawk"),
@@ -173,7 +176,7 @@ ALSO = [
     (41, "Asia", "Victoria: One Nation may win 10 seats", "Reuters"),
     (42, "Asia", "Victoria votes Saturday 28 Nov", "Reuters"),
     (43, "US", "US Treasury sells $70bn 5-year notes", "Reuters"),
-    (44, "Asia", "Japan PMIs: Oct factory 53.3", "S&P Global"),
+    (44, "Asia", "Japan PMI: composite 51.5, six-month low", "S&P Global"),
 ]
 
 STATS = [
@@ -210,19 +213,7 @@ PINS = [
 TOTAL_STORIES = 3 + len(SMALL) + len(ALSO)
 
 # ------------------------------------------------------------------ helpers
-def cover_crop(img, tw, th):
-    """Centre-crop an image to the target aspect, then resize."""
-    sw, sh = img.size
-    target = tw / th
-    if sw / sh > target:
-        nw = int(sh * target)
-        x0 = (sw - nw) // 2
-        img = img.crop((x0, 0, x0 + nw, sh))
-    else:
-        nh = int(sw / target)
-        y0 = (sh - nh) // 2
-        img = img.crop((0, y0, sw, y0 + nh))
-    return img.resize((tw, th), Image.LANCZOS)
+
 
 
 def wrap(d, text, font, max_w, max_lines, what):
@@ -253,48 +244,7 @@ def check_fit(d, text, font, max_w, what):
                          % (what, text, d.textlength(text, font=font), max_w))
 
 
-# The 12 small-story panels use real AI illustrations (flat vector,
-# cream background, navy/red palette, no text). Each source is cropped
-# to the wide, short panel aspect (156x40): the full width is kept and
-# a horizontal band is taken. BAND_CY is the vertical centre of that
-# band as a fraction of image height; stadium/ball scenes sit a little
-# low so their key symbol lands inside the band.
-ILLUS_FILES = {
-    "pmi": "media-generation-illus-pmi-0-f4d3d26f-6747-4809-9436-aa85db314258.webp",
-    "ucl": "media-generation-illus-ucl-0-626e7d6a-eac2-40af-93f9-164eb101c7b2.webp",
-    "nba": "media-generation-illus-nba-0-3809e39a-bb0b-43f5-bad4-1b4d8087cc1c.webp",
-    "treasury": "media-generation-illus-treasury-0-e837d69f-5a81-4c9a-a3b5-47c6463b3866.webp",
-    "stocks": "media-generation-illus-stocks-0-9bb14124-1aa5-4cb1-84db-2099eff2c7f6.webp",
-    "mnf": "media-generation-illus-mnf-0-cd1390db-c925-4479-aeee-1a319f79c8f6.webp",
-    "ifo": "media-generation-illus-ifo-0-7519cbb1-77a3-43c4-aec3-d6ae39001b3f.webp",
-    "chips": "media-generation-illus-chips-0-6e877990-85b2-4f3b-9cb7-c27378a810f1.webp",
-    "bank": "media-generation-illus-bank-0-2e1956c8-c641-4e3d-a97b-a8a011c345ec.webp",
-    "u17": "media-generation-illus-u17-0-336be83d-c4be-418b-a9e9-75d05384dfaf.webp",
-    "adp": "media-generation-illus-adp-0-6f7876ac-4351-4ba1-bd55-684985fd6d28.webp",
-    "vote": "media-generation-illus-vote-0-e6bec100-8720-4098-9b33-5febf6040966.webp",
-}
-BAND_CY = {"ucl": 0.55, "mnf": 0.55, "u17": 0.55, "nba": 0.52}
-_ILLUS_CACHE = {}
 
-
-def illus_panel(key, tw, th):
-    """Wide, short band of an illustration, cropped to tw x th."""
-    if key not in _ILLUS_CACHE:
-        src = Image.open(os.path.join(ILLUS, ILLUS_FILES[key])).convert("RGB")
-        w, h = src.size
-        target = tw / th
-        if w / h > target:
-            nw = int(h * target)
-            x0 = (w - nw) // 2
-            band = src.crop((x0, 0, x0 + nw, h))
-        else:
-            nh = int(w / target)
-            cy = BAND_CY.get(key, 0.5)
-            y0 = int(cy * h - nh / 2)
-            y0 = max(0, min(y0, h - nh))
-            band = src.crop((0, y0, w, y0 + nh))
-        _ILLUS_CACHE[key] = band.resize((tw, th), Image.LANCZOS)
-    return _ILLUS_CACHE[key]
 
 
 # ------------------------------------------------------------------ world map
@@ -330,13 +280,19 @@ def render():
     d.text((W // 2, 72), stand, font=serif(13), fill=RED, anchor="ma")
     d.line([MX, 88, RX, 88], fill=NAVY, width=1)
 
-    # ---------- six-number stats row ----------
-    cell_w = (RX - MX) / 6
+    # ---------- six-number stats row, labelled THE DAY IN NUMBERS ----------
+    # The label takes a 64px strip at the left (two lines, bold 9);
+    # the six cells share the rest. Longest label is 140px at 9pt,
+    # cells are 152px wide, wrapped at cell_w - 8 = 144px: fits.
+    d.text((MX, 102), "THE DAY", font=bold(9), fill=NAVY)
+    d.text((MX, 114), "IN NUMBERS", font=bold(9), fill=NAVY)
+    stats_x0 = MX + 64
+    cell_w = (RX - stats_x0) / 6
     for i, (num, label) in enumerate(STATS):
-        cx = MX + cell_w * i + cell_w / 2
+        cx = stats_x0 + cell_w * i + cell_w / 2
         check_fit(d, num, serif_bold(26), cell_w - 8, "stat number")
         d.text((cx, 92), num, font=serif_bold(26), fill=RED, anchor="ma")
-        lines = wrap(d, label, regular(9), cell_w - 12, 1, "stat label")
+        lines = wrap(d, label, regular(9), cell_w - 8, 1, "stat label")
         ly = 122
         for ln in lines:
             d.text((cx, ly), ln, font=regular(9), fill=GREY, anchor="ma")
@@ -369,16 +325,13 @@ def render():
         d.text((gx + tw + 4, 166), label, font=regular(9),
                fill=(255, 255, 255))
 
-    # ---------- 3 lead stories with real photos ----------
+    # ---------- 3 lead stories with code-drawn illustrations ----------
     lead_w = 317
     lead_x = [MX, MX + lead_w + 12, MX + 2 * (lead_w + 12)]
     lead_y, photo_h = 188, 148
-    for i, (fname, banner, dateline, head, summ, src, tag) in enumerate(LEADS):
+    for i, (kind, banner, dateline, head, summ, src, tag) in enumerate(LEADS):
         x = lead_x[i]
-        photo = cover_crop(
-            Image.open(os.path.join(PHOTOS, fname)).convert("RGB"),
-            lead_w, photo_h)
-        img.paste(photo, (x, lead_y))
+        img.paste(LEAD_DRAW[kind](), (x, lead_y))
         bw = d.textlength(banner, font=bold(10)) + 14
         d.rectangle([x, lead_y, x + bw, lead_y + 18], fill=RED)
         d.text((x + 7, lead_y + 4), banner, font=bold(10),
@@ -403,7 +356,7 @@ def render():
             sy += 14
         d.text((x, sy + 2), "(" + src + ")", font=regular(10), fill=GREY)
 
-    # ---------- 12 small stories: AI illustration + banner ----------
+    # ---------- 12 small stories: code-drawn illustration + banner ----------
     small_w = 156
     small_x = [MX + i * (small_w + 8) for i in range(6)]
     row_y = [480, 592]
@@ -411,7 +364,7 @@ def render():
         y0 = row_y[r]
         for c, (num, banner, dateline, head, summ, src, key) in enumerate(row):
             x = small_x[c]
-            img.paste(illus_panel(key, small_w, 40), (x, y0))
+            img.paste(SMALL_DRAW[key](), (x, y0))
             bw = d.textlength(banner, font=bold(9)) + 10
             if bw > small_w:
                 raise ValueError("OVERFLOW small banner: %r" % banner)
@@ -457,20 +410,29 @@ def render():
     for num, lat, lon in PINS:
         tx, ty = to_xy(lat, lon)
         cx, cy = tx, ty
-        for ox, oy in [(0, -14), (14, 0), (0, 14), (-14, 0), (14, -14),
-                       (-14, -14), (14, 14), (-14, 14), (0, -28), (28, 0),
-                       (-28, 0), (0, 28)]:
+        # Spread crowded pins (Europe + the two Seoul / two Tokyo pairs
+        # share a spot): try larger offsets, keep the pin inside the
+        # map plot, and keep 15px from every pin placed before it.
+        for ox, oy in [(0, -15), (15, 0), (0, 15), (-15, 0), (15, -15),
+                       (-15, -15), (15, 15), (-15, 15), (0, -30),
+                       (30, 0), (0, 30), (-30, 0), (30, -30), (-30, -30),
+                       (30, 30), (-30, 30), (0, -45), (45, 0), (-45, 0),
+                       (0, 45)]:
+            nx, ny = tx + ox, ty + oy
+            if not (dot_x0 + 8 <= nx <= dot_x0 + dot_w - 8
+                    and dot_y0 + 8 <= ny <= dot_y0 + dot_h - 8):
+                continue
             ok = True
             for px, py in placed:
-                if math.hypot(cx + ox - px, cy + oy - py) < 13:
+                if math.hypot(nx - px, ny - py) < 15:
                     ok = False
                     break
             if ok:
-                cx, cy = cx + ox, cy + oy
+                cx, cy = nx, ny
                 break
         if (cx, cy) != (tx, ty):
             d.line([tx, ty, cx, cy], fill=(255, 255, 255), width=1)
-        d.ellipse([cx - 6.5, cy - 6.5, cx + 6.5, cy + 6.5],
+        d.ellipse([cx - 6, cy - 6, cx + 6, cy + 6],
                   fill=RED, outline=(255, 255, 255), width=1)
         d.text((cx, cy - 4), str(num), font=bold(8), fill=(255, 255, 255),
                anchor="ma")
@@ -530,7 +492,8 @@ def render():
     check_fit(d, foot1, regular(9), W - 48, "footer sources")
     d.text((W // 2, 990), foot1, font=regular(9), fill=GREY, anchor="ma")
     foot2 = ("CERTAINTY: REPORTED = carried by the day's wires · CLAIM = one "
-             "side's account · FORECAST = still to happen when drawn")
+             "side's account · FORECAST = still to happen when drawn · "
+             "Illustrations and map drawn in code")
     check_fit(d, foot2, regular(9), W - 48, "footer legend")
     d.text((W // 2, 1002), foot2, font=regular(9), fill=GREY, anchor="ma")
     d.rectangle([0, 1014, W, 1024], fill=NAVY)
@@ -543,5 +506,6 @@ def render():
 
 if __name__ == "__main__":
     out = render()
-    out.save(os.path.join(HERE, "entry.png"), optimize=True)
-    print("saved entry.png", out.size, "stories:", TOTAL_STORIES)
+    out_path = os.environ.get("GEN_OUT", os.path.join(HERE, "entry.png"))
+    out.save(out_path, optimize=True)
+    print("saved", out_path, out.size, "stories:", TOTAL_STORIES)

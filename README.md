@@ -21,7 +21,8 @@ Layout, top to bottom:
 - Serif masthead: "Tuesday 24 November 2026", with a three-item
   standfirst (Ulleung shelter alert, the Swiss-office row, the Tokyo
   rally).
-- Six-number stats row: 07:52 shelter alert on Ulleung, +3% Nikkei
+- Six-number stats row, labelled "THE DAY IN NUMBERS": 07:52 shelter
+  alert on Ulleung, +3% Nikkei
   futures at reopen, 9 Champions League ties tonight, 10 NBA games
   tonight, $70bn US Treasury sale today, 8 U-17 World Cup games today.
 - Colour region bar: ASIA-PACIFIC 20, AMERICAS 14, EUROPE 9, AFRICA 1
@@ -29,13 +30,15 @@ Layout, top to bottom:
 - Navy UTC timeline strip: 22:52 Ulleung, 00:30 Japan PMI, 01:15 MNF,
   12:30 U-17, 17:45 Galatasaray, 18:00 Treasury, 20:00 UCL night,
   TUE Swiss row.
-- Three lead stories with professional AI photographs (wire-service
-  quality, no visible AI artefacts), each with a red banner, a red
-  dateline, a headline, a short summary, a named source and a
-  certainty tag (REPORTED / CLAIM / FORECAST).
-- Twelve small stories, each with a flat-vector AI illustration
-  (cream background, navy/red/gold palette, no text), a red banner,
-  a dateline, a headline, a summary and a named source.
+- Three lead stories with code-drawn flat-vector illustrations
+  (lighthouse + jet for Ulleung, government building + red gate for
+  Pyongyang, Tokyo tower + gold arrow for Tokyo), each with a red
+  banner, a red dateline, a headline, a short summary, a named source
+  and a certainty tag (REPORTED / CLAIM / FORECAST).
+- Twelve small stories, each with a code-drawn flat-vector panel
+  (one bold symbol per story: factory, stadium, player, treasury,
+  bars, football, gauge, bank, ball, briefcase, chip, ballot box),
+  a red banner, a dateline, a headline, a summary and a named source.
 - Bottom-left: "WHERE IT HAPPENED", a real world map with numbered
   red pins (1–15) matching the lead and small-story numbers.
 - Bottom-right: "ALSO ON TUESDAY 24 NOVEMBER — 29 MORE STORIES",
@@ -43,6 +46,19 @@ Layout, top to bottom:
 - Red DATE CHECK box: events from other days deliberately left out.
 - Footer: sources line, certainty legend, navy strip with the paper
   name and date.
+
+## Why every picture is drawn in code
+
+The five paid finalists of the previous day's news-image bounty
+(22 Nov 2026) all used flat-vector illustrations drawn in code —
+no photographs, no AI-generated images — and said so in their
+footers. Our 22 Nov photo-first entry and our 23 Nov AI-illustration
+entry both missed the paid places. This entry follows the winning
+pattern: every picture on the page is produced by `draw_panels.py`
+from PIL primitives, and the footer states it ("Illustrations and
+map drawn in code"). The map is real land outlines (Natural Earth),
+not a dotted approximation; the pins are placed by latitude and
+longitude with a collision-avoidance pass.
 
 ## The 44 stories
 
@@ -66,8 +82,9 @@ Layout, top to bottom:
 
 ### Small stories (4–15)
 
-4. Tokyo, ECONOMY — Japan flash PMI lands today. Nov flash PMI out
-   00:30 GMT; Oct factory 53.3. Source: S&P Global.
+4. Tokyo, ECONOMY — Japan PMI: factories up, services cool. Nov
+   flash: factory 53.7, services 50.5, composite 51.5. Source:
+   S&P Global.
 5. Europe, SPORT — Champions League: 9 ties tonight. Arsenal v
    Dortmund; City v Napoli; Real Madrid v PSV. Source: UEFA.
 6. USA, SPORT — NBA: 10 games on tonight's slate. Thunder at Pacers;
@@ -104,7 +121,7 @@ Layout, top to bottom:
 24. US — SOX chip index +14% on Monday (Reuters).
 25. Asia — Korea eases buyback limits from today (FSC).
 26. Asia — SK Hynix US shares +20% on Monday (Finnhub).
-27. Asia — Japan flash PMI out 00:30 GMT (S&P Global).
+27. Asia — Japan PMI: factory 53.7, services 50.5 (S&P Global).
 28. Europe — Germany Ifo index due today (Reuters).
 29. US — ADP weekly jobs due today (Newsquawk).
 30. US — Chicago Fed labor data due today (Newsquawk).
@@ -121,7 +138,7 @@ Layout, top to bottom:
 41. Asia — Victoria: One Nation may win 10 seats (Reuters).
 42. Asia — Victoria votes Saturday 28 Nov (Reuters).
 43. US — US Treasury sells $70bn 5-year notes (Reuters).
-44. Asia — Japan PMIs: Oct factory 53.3 (S&P Global).
+44. Asia — Japan PMI: composite 51.5, six-month low (S&P Global).
 
 ## Date discipline
 
@@ -156,16 +173,17 @@ so no two pins overlap.
 - `main.py` — the entrypoint. Python 3.13, stdlib only, no network.
   Copies `entry.png` to `$MAKEFUN_OUTPUT_DIR` (default `/output`).
 - `gen_image.py` — regenerates `entry.png` deterministically from
-  the assets in `build/`. Fixed fonts (DejaVu), fixed layout, no
-  timestamps, no randomness, no network at runtime. Two runs are
-  byte-identical. It hard-fails on any layout violation: a line wider
-  than its allotted width, wrapped text over its line count, or a
-  block bottom past its limit.
-- `entry.png` — the built front page, 1024×1024, 518,652 bytes
+  code alone. Fixed fonts (DejaVu), fixed layout, no timestamps, no
+  randomness, no network at runtime. Two runs are byte-identical.
+  It hard-fails on any layout violation: a line wider than its
+  allotted width, wrapped text over its line count, or a block
+  bottom past its limit.
+- `draw_panels.py` — all 15 illustrations, drawn in code with PIL
+  primitives only (rectangles, ellipses, polygons, lines). No
+  photos, no AI image generation, no gradients, no text inside the
+  illustrations. Lead panels 317×148, small panels 156×40.
+- `entry.png` — the built front page, 1024×1024, 208,579 bytes
   (under the 1 MiB cap).
-- `build/assets/` — the 3 AI lead photographs (WebP).
-- `build/illustrations/` — the 12 AI flat-vector illustrations
-  (WebP) plus one unused oil illustration.
 - `.makefun/` — the make.fun anchor (`freshness.json`) and the
   owner wallet (`owner.json`).
 
